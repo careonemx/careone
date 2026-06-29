@@ -1,0 +1,15 @@
+# Excluye del contexto de build del backend lo que no se necesita en la imagen.
+# Reduce tamano y tiempo de build, y evita filtrar secretos.
+target/
+storage/
+.git/
+.gitignore
+.idea/
+.vscode/
+*.iml
+*.md
+HELP.md
+.env
+.env.*
+*.log
+hs_err_pid*

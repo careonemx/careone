@@ -1,0 +1,30 @@
+# ===== Override para servidor / produccion =====
+# Conecta backend y frontend a la red del reverse proxy (Nginx Proxy Manager).
+# NO publica puertos directamente: el reverse proxy enruta el trafico.
+# El frontend se construye con VITE_API_URL=/api (mismo dominio, ruta /api).
+# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+services:
+  db:
+    networks:
+      - careone-internal
+
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    networks:
+      - careone-internal
+      - proxy
+
+  frontend:
+    build:
+      args:
+        VITE_API_URL: /api
+    networks:
+      - proxy
+
+networks:
+  careone-internal:
+    internal: true
+  proxy:
+    external: true

@@ -1,0 +1,19 @@
+# ===== Override para desarrollo local (WSL) =====
+# Publica los puertos para acceder desde tu PC.
+#   - Postgres: 5433 (host) -> 5432 (contenedor)
+#   - Backend:  8080
+#   - Frontend: 80
+# Uso: docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+
+services:
+  db:
+    ports:
+      - "5433:5432"
+
+  backend:
+    ports:
+      - "8080:8080"
+
+  frontend:
+    ports:
+      - "80:8080"

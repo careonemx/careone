@@ -1,0 +1,26 @@
+# ===== Override para DEMO en servidor compartido (acceso por IP:puerto) =====
+# Solo publica el FRONTEND en un puerto del host (configurable con FRONTEND_PORT).
+# La BD y el backend quedan INTERNOS (sin puertos publicados) -> no chocan con
+# otros proyectos ni con Nginx Proxy Manager.
+#
+# El navegador habla solo con el frontend; su nginx hace proxy de /api -> backend.
+#
+# Uso en el servidor:
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+#
+# Acceso:  http://IP-DEL-SERVIDOR:${FRONTEND_PORT}   (por defecto 8082)
+
+services:
+  db:
+    # Sin 'ports': la BD no se expone al host. Solo el backend la ve por la red interna.
+    restart: unless-stopped
+
+  backend:
+    # Sin 'ports': el backend no se expone al host. El frontend lo alcanza por la red.
+    restart: unless-stopped
+
+  frontend:
+    # Unico servicio publicado. Elige un puerto libre del servidor con FRONTEND_PORT.
+    ports:
+      - "${FRONTEND_PORT:-8082}:8080"
+    restart: unless-stopped

@@ -1,0 +1,18 @@
+# Excluye del contexto de build del frontend lo que no se necesita en la imagen.
+# IMPORTANTE: node_modules se reinstala dentro del contenedor (npm ci), por eso
+# se excluye (ademas pesa ~400MB y ralentizaria el build).
+node_modules/
+dist/
+.vite/
+.git/
+.gitignore
+.idea/
+.vscode/
+*.md
+README.md
+.env
+.env.*
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
