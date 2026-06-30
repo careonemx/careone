@@ -3,6 +3,7 @@ package com.careone.api.config;
 import com.careone.api.security.JwtAuthFilter;
 import com.careone.api.security.JwtProperties;
 import com.careone.api.security.RateLimitingFilter;
+import com.careone.api.security.RestAuthenticationEntryPoint;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -32,13 +33,16 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final RateLimitingFilter rateLimitingFilter;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final Environment env;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
                           RateLimitingFilter rateLimitingFilter,
+                          RestAuthenticationEntryPoint authenticationEntryPoint,
                           Environment env) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.rateLimitingFilter = rateLimitingFilter;
+        this.authenticationEntryPoint = authenticationEntryPoint;
         this.env = env;
     }
 
@@ -53,6 +57,9 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health").permitAll()
                 .anyRequest().authenticated()
             )
+            // 401 (no 403) cuando NO hay autenticacion: token ausente/expirado.
+            // Asi el frontend sabe que debe refrescar el token o ir al login.
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
             .headers(headers -> headers
                 .contentTypeOptions(opt -> {})
                 .frameOptions(frame -> frame.deny())
