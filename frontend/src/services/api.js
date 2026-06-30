@@ -47,10 +47,16 @@ const processQueue = (error, token = null) => {
 /**
  * Cierra la sesion: limpia tokens y redirige al login. Evita que la app se quede
  * "colgada" cuando el refresh token tambien expiro. No redirige si ya esta en login.
+ *
+ * Si {@code sesionExpirada} es true, deja una marca para que la pantalla de login
+ * muestre el aviso "Tu sesion expiro, vuelve a iniciar sesion".
  */
-function cerrarSesion() {
+function cerrarSesion(sesionExpirada = false) {
   tokenStore.clear();
   localStorage.removeItem('careone_user');
+  if (sesionExpirada) {
+    sessionStorage.setItem('careone_sesion_expirada', '1');
+  }
   if (!window.location.pathname.startsWith('/login')) {
     window.location.assign('/login');
   }
@@ -66,7 +72,7 @@ api.interceptors.response.use(
     if (status === 401 && !original._retry && !original.url?.includes('/auth/refresh')) {
       const refresh = tokenStore.getRefresh();
       if (!refresh) {
-        cerrarSesion();
+        cerrarSesion(true);
         return Promise.reject(error);
       }
 
@@ -91,7 +97,7 @@ api.interceptors.response.use(
         return api(original);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        cerrarSesion();
+        cerrarSesion(true);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

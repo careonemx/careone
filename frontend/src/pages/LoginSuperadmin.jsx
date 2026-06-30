@@ -11,6 +11,12 @@ export default function LoginSuperadmin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Si llegamos aqui por sesion expirada, lo mostramos una vez y limpiamos la marca.
+  const [sesionExpirada] = useState(() => {
+    const expiro = sessionStorage.getItem('careone_sesion_expirada') === '1';
+    if (expiro) sessionStorage.removeItem('careone_sesion_expirada');
+    return expiro;
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,6 +49,11 @@ export default function LoginSuperadmin() {
           <Box sx={{ fontSize: 13, color: palette.text2, mt: 0.5 }}>Acceso al sistema</Box>
         </Box>
 
+        {sesionExpirada && !error && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Tu sesion expiro por inactividad. Vuelve a iniciar sesion.
+          </Alert>
+        )}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         <form onSubmit={handleSubmit}>

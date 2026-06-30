@@ -1,10 +1,8 @@
 package com.careone.api.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
@@ -24,11 +22,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-    private final ObjectMapper objectMapper;
-
-    public RestAuthenticationEntryPoint(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    // Mismo envoltorio { data, message, errors } que el resto de la API.
+    private static final String BODY =
+            "{\"data\":null,\"message\":\"Tu sesion expiro o no has iniciado sesion.\",\"errors\":null}";
 
     @Override
     public void commence(HttpServletRequest request,
@@ -37,8 +33,6 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
-        // Mismo envoltorio { data, message, errors } que el resto de la API.
-        var body = Map.of("data", "", "message", "Tu sesion expiro o no has iniciado sesion.");
-        objectMapper.writeValue(response.getWriter(), body);
+        response.getWriter().write(BODY);
     }
 }
