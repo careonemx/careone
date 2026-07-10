@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Box } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
+import { NuevaCitaProvider } from '../context/NuevaCitaContext';
 import { palette } from '../theme';
 
 // Iconos SVG inline fieles a agenda-v3.html / paciente-v1.html
@@ -33,8 +34,10 @@ const navSistema = [
 const SW = 208; // ancho del sidebar (estilo inicio-v6)
 
 export default function ClinicaLayout({ children }) {
-  const { user, logout } = useAuth();
+  const { user, logout, hasRole } = useAuth();
   const navigate = useNavigate();
+  // Solo el ADMIN_CLINICA administra personal/permisos/configuración.
+  const esAdmin = hasRole('ADMIN_CLINICA');
   const [movilOpen, setMovilOpen] = useState(false);
   const handleLogout = () => { logout(); navigate('/login', { replace: true }); };
   const cerrarMovil = () => setMovilOpen(false);
@@ -62,14 +65,19 @@ export default function ClinicaLayout({ children }) {
             <Icon d={item.icon} />{item.label}
           </NavLink>
         ))}
-        <Box sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: palette.text3, px: 1.5, pt: 2, pb: 0.625 }}>
-          Sistema
-        </Box>
-        {navSistema.map((item) => (
-          <NavLink key={item.to} to={item.to} onClick={cerrarMovil} style={({ isActive }) => itemStyle(isActive, false)}>
-            <Icon d={item.icon} />{item.label}
-          </NavLink>
-        ))}
+        {/* Sección Sistema: solo el ADMIN_CLINICA la ve. */}
+        {esAdmin && (
+          <>
+            <Box sx={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: palette.text3, px: 1.5, pt: 2, pb: 0.625 }}>
+              Sistema
+            </Box>
+            {navSistema.map((item) => (
+              <NavLink key={item.to} to={item.to} onClick={cerrarMovil} style={({ isActive }) => itemStyle(isActive, false)}>
+                <Icon d={item.icon} />{item.label}
+              </NavLink>
+            ))}
+          </>
+        )}
       </Box>
       <Box sx={{ p: '14px 18px', borderTop: `1px solid ${palette.divider}`, display: 'flex', alignItems: 'center', gap: 1.25 }}>
         <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: palette.blue, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
@@ -103,16 +111,18 @@ export default function ClinicaLayout({ children }) {
         <Box onClick={cerrarMovil} sx={{ position: 'fixed', inset: 0, bgcolor: 'rgba(0,0,0,.2)', zIndex: 99, display: { md: 'none' } }} />
       )}
 
-      <Box component="main" sx={{ ml: { xs: 0, md: `${SW}px` }, flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0 }}>
-        {/* Barra superior movil con hamburguesa */}
-        <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1.5, height: 56, px: 2, bgcolor: palette.white, borderBottom: `1px solid ${palette.border}`, position: 'sticky', top: 0, zIndex: 50 }}>
-          <Box onClick={() => setMovilOpen(true)} sx={{ width: 36, height: 36, borderRadius: 2, border: `1px solid ${palette.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <svg width="18" height="18" fill="none" stroke={palette.text2} strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+      <NuevaCitaProvider>
+        <Box component="main" sx={{ ml: { xs: 0, md: `${SW}px` }, flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0 }}>
+          {/* Barra superior movil con hamburguesa */}
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1.5, height: 56, px: 2, bgcolor: palette.white, borderBottom: `1px solid ${palette.border}`, position: 'sticky', top: 0, zIndex: 50 }}>
+            <Box onClick={() => setMovilOpen(true)} sx={{ width: 36, height: 36, borderRadius: 2, border: `1px solid ${palette.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <svg width="18" height="18" fill="none" stroke={palette.text2} strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+            </Box>
+            <Box sx={{ fontSize: 16, fontWeight: 800 }}>Care<Box component="span" sx={{ color: palette.blue }}>One</Box></Box>
           </Box>
-          <Box sx={{ fontSize: 16, fontWeight: 800 }}>Care<Box component="span" sx={{ color: palette.blue }}>One</Box></Box>
+          {children}
         </Box>
-        {children}
-      </Box>
+      </NuevaCitaProvider>
     </Box>
   );
 }

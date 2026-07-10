@@ -37,6 +37,7 @@ public class ConfiguracionClinicaService {
         c.setDireccion(req.direccion());
         c.setHoraApertura(req.horaApertura());
         c.setHoraCierre(req.horaCierre());
+        c.setDuracionCitaDefault(req.duracionCitaDefault());
         // WhatsApp: solo estructura, sin logica de envio (fase final).
         c.setWhatsappNumero(req.whatsappNumero());
         if (req.whatsappActivo() != null) {

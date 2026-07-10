@@ -25,7 +25,7 @@ public class PacienteService {
     public Page<PacienteRecord> listar(String q, Pageable pageable) {
         Page<Paciente> page = (q == null || q.isBlank())
                 ? pacienteRepository.findAll(pageable)
-                : pacienteRepository.findByNombreContainingIgnoreCaseOrApellidosContainingIgnoreCase(q, q, pageable);
+                : pacienteRepository.buscar(q.trim(), pageable);
         return page.map(PacienteRecord::from);
     }
 

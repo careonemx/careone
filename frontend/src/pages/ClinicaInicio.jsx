@@ -60,7 +60,6 @@ export default function ClinicaInicio() {
         </Box>
         <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
           <Button variant="outlined" size="small" onClick={() => navigate('/clinica/pacientes')}>+ Nuevo paciente</Button>
-          <Button variant="contained" size="small" onClick={() => navigate('/clinica/agenda')}>+ Nueva cita</Button>
         </Box>
       </Box>
 

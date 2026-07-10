@@ -14,6 +14,7 @@ const aFormulario = (c) => ({
   email: c.email || '', direccion: c.direccion || '',
   horaApertura: (c.horaApertura || '08:00:00').slice(0, 5),
   horaCierre: (c.horaCierre || '18:00:00').slice(0, 5),
+  duracionCitaDefault: c.duracionCitaDefault ?? 30,
   whatsappNumero: c.whatsappNumero || '', whatsappActivo: c.whatsappActivo || false,
 });
 
@@ -43,6 +44,7 @@ export default function ClinicaConfiguracion() {
       ...form,
       horaApertura: form.horaApertura + ':00',
       horaCierre: form.horaCierre + ':00',
+      duracionCitaDefault: Number(form.duracionCitaDefault) || 30,
     });
   };
 
@@ -89,6 +91,10 @@ export default function ClinicaConfiguracion() {
               <Grid item xs={6}><TextField label="Hora de cierre" type="time" fullWidth margin="dense" size="small"
                 InputLabelProps={{ shrink: true }}
                 value={form.horaCierre} onChange={(e) => setForm({ ...form, horaCierre: e.target.value })} /></Grid>
+              <Grid item xs={6}><TextField label="Duración de cita por defecto (min)" type="number" fullWidth margin="dense" size="small"
+                inputProps={{ min: 5, max: 480, step: 5 }}
+                helperText="Se usa al agendar sin especificar duración."
+                value={form.duracionCitaDefault} onChange={(e) => setForm({ ...form, duracionCitaDefault: e.target.value })} /></Grid>
             </Grid>
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>

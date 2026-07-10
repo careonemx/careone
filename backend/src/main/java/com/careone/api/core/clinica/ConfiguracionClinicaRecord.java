@@ -16,6 +16,7 @@ public record ConfiguracionClinicaRecord(
         String direccion,
         LocalTime horaApertura,
         LocalTime horaCierre,
+        int duracionCitaDefault,
         String whatsappNumero,
         boolean whatsappActivo
 ) {
@@ -30,6 +31,7 @@ public record ConfiguracionClinicaRecord(
                 c.getDireccion(),
                 c.getHoraApertura(),
                 c.getHoraCierre(),
+                c.getDuracionCitaDefault(),
                 c.getWhatsappNumero(),
                 c.isWhatsappActivo());
     }

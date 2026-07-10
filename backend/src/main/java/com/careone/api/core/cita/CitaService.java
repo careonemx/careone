@@ -30,21 +30,38 @@ public class CitaService {
     private final DoctorRepository doctorRepository;
     private final ClinicaRepository clinicaRepository;
     private final com.careone.api.core.tipocita.TipoCitaRepository tipoCitaRepository;
+    private final com.careone.api.core.bloqueo.BloqueoHorarioRepository bloqueoRepository;
+    private final com.careone.api.core.historia.HistoriaClinicaRepository historiaRepository;
 
     public CitaService(CitaRepository citaRepository, PacienteRepository pacienteRepository,
                        DoctorRepository doctorRepository, ClinicaRepository clinicaRepository,
-                       com.careone.api.core.tipocita.TipoCitaRepository tipoCitaRepository) {
+                       com.careone.api.core.tipocita.TipoCitaRepository tipoCitaRepository,
+                       com.careone.api.core.bloqueo.BloqueoHorarioRepository bloqueoRepository,
+                       com.careone.api.core.historia.HistoriaClinicaRepository historiaRepository) {
         this.citaRepository = citaRepository;
         this.pacienteRepository = pacienteRepository;
         this.doctorRepository = doctorRepository;
         this.clinicaRepository = clinicaRepository;
         this.tipoCitaRepository = tipoCitaRepository;
+        this.bloqueoRepository = bloqueoRepository;
+        this.historiaRepository = historiaRepository;
+    }
+
+    /** Mapa pacienteId → historia, para derivar alertas sin N+1. */
+    private java.util.Map<Long, com.careone.api.core.historia.HistoriaClinica> historiasDe(List<Cita> citas) {
+        java.util.Set<Long> ids = citas.stream().map(c -> c.getPaciente().getId()).collect(java.util.stream.Collectors.toSet());
+        if (ids.isEmpty()) return java.util.Map.of();
+        return historiaRepository.findByPacienteIdIn(ids).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.careone.api.core.historia.HistoriaClinica::getPacienteId, h -> h));
     }
 
     @Transactional(readOnly = true)
     public AgendaDiaRecord agendaDelDia(LocalDate fecha) {
         List<Cita> citas = citaRepository.findDelDia(fecha);
-        List<CitaRecord> citaRecords = citas.stream().map(CitaRecord::from).toList();
+        var historias = historiasDe(citas);
+        List<CitaRecord> citaRecords = citas.stream()
+                .map(c -> CitaRecord.from(c, historias.get(c.getPaciente().getId()))).toList();
 
         // Pendientes
         List<AgendaDiaRecord.PendienteRecord> cobros = new ArrayList<>();
@@ -94,7 +111,10 @@ public class CitaService {
         Long usuarioId = SecurityUtil.currentUsuarioId();
         Long doctorId = usuarioId == null ? null
                 : doctorRepository.findByUsuarioId(usuarioId).map(Doctor::getId).orElse(null);
-        return citaRepository.findEnRango(desde, hasta, doctorId).stream().map(CitaRecord::from).toList();
+        List<Cita> citas = citaRepository.findEnRango(desde, hasta, doctorId);
+        var historias = historiasDe(citas);
+        return citas.stream()
+                .map(c -> CitaRecord.from(c, historias.get(c.getPaciente().getId()))).toList();
     }
 
     @Transactional
@@ -102,13 +122,19 @@ public class CitaService {
         Paciente paciente = pacienteRepository.findById(req.pacienteId())
                 .orElseThrow(() -> new NotFoundException("El paciente no existe."));
         if (!SecurityUtil.perteneceAlTenant(paciente)) throw new NotFoundException("El paciente no existe.");
-        Doctor doctor = doctorRepository.findById(req.doctorId())
-                .orElseThrow(() -> new NotFoundException("El doctor no existe."));
-        if (!SecurityUtil.perteneceAlTenant(doctor)) throw new NotFoundException("El doctor no existe.");
+
+        Doctor doctor = resolverDoctor(req.doctorId());
+
+        // Duracion: la enviada o, si no viene, la predeterminada de la clinica.
+        int duracion = req.duracionMin() != null ? req.duracionMin() : duracionPorDefecto();
 
         LocalTime inicio = req.horaInicio();
-        LocalTime fin = inicio.plusMinutes(req.duracionMin());
+        LocalTime fin = inicio.plusMinutes(duracion);
         validarSolape(doctor.getId(), req.fecha(), inicio, fin, null);
+        // No se puede agendar sobre un horario bloqueado.
+        if (!bloqueoRepository.findSolapados(req.fecha(), inicio, fin, doctor.getId()).isEmpty()) {
+            throw new ConflictException("Ese horario está bloqueado y no se puede agendar.");
+        }
 
         Cita cita = new Cita();
         cita.setPaciente(paciente);
@@ -123,7 +149,7 @@ public class CitaService {
         cita.setFecha(req.fecha());
         cita.setHoraInicio(inicio);
         cita.setHoraFin(fin);
-        cita.setDuracionMin(req.duracionMin());
+        cita.setDuracionMin(duracion);
         cita.setMonto(req.monto());
         cita.setRecordatorioWhatsapp(req.recordatorioWhatsapp() == null || req.recordatorioWhatsapp());
         cita.setNotas(req.notas());
@@ -132,6 +158,37 @@ public class CitaService {
         cita.setPrimeraVez(citaRepository.findByPacienteIdAndEstadoNotOrderByFechaDescHoraInicioDesc(
                 paciente.getId(), EstadoCita.CANCELADA).isEmpty());
         return CitaRecord.from(citaRepository.save(cita));
+    }
+
+    /**
+     * Resuelve el doctor de la cita. Si viene id, lo valida en el tenant.
+     * Si NO viene (clinica de un solo doctor), lo asigna automaticamente; si hay
+     * varios y no se especifico, es un error (el frontend debe mostrar el selector).
+     */
+    private Doctor resolverDoctor(Long doctorId) {
+        if (doctorId != null) {
+            Doctor doctor = doctorRepository.findById(doctorId)
+                    .orElseThrow(() -> new NotFoundException("El doctor no existe."));
+            if (!SecurityUtil.perteneceAlTenant(doctor)) throw new NotFoundException("El doctor no existe.");
+            return doctor;
+        }
+        List<Doctor> doctores = doctorRepository.findAllByOrderByIdAsc();
+        if (doctores.isEmpty()) {
+            throw new ConflictException("La clinica no tiene doctores registrados.");
+        }
+        if (doctores.size() > 1) {
+            throw new ConflictException("Debes seleccionar un doctor para la cita.");
+        }
+        return doctores.get(0);
+    }
+
+    /** Duracion por defecto configurada en la clinica del tenant actual (fallback 30). */
+    private int duracionPorDefecto() {
+        Long tenantId = SecurityUtil.currentTenantId();
+        if (tenantId == null) return 30;
+        return clinicaRepository.findById(tenantId)
+                .map(Clinica::getDuracionCitaDefault)
+                .orElse(30);
     }
 
     @Transactional

@@ -14,12 +14,12 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Gestion de doctores de la clinica. Solo el ADMIN_CLINICA administra el personal.
+ * Gestion de doctores de la clinica. Solo el ADMIN_CLINICA administra (crear/editar);
+ * todo el personal puede LISTARLOS (para el selector de nueva cita).
  * El aislamiento por tenant es automatico (filtro de Hibernate).
  */
 @RestController
 @RequestMapping("/doctores")
-@PreAuthorize("hasRole('ADMIN_CLINICA')")
 public class DoctorResource {
 
     private final DoctorService service;
@@ -29,17 +29,20 @@ public class DoctorResource {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN_CLINICA','DOCTOR','RECEPCIONISTA','AYUDANTE')")
     public ApiResponse<List<DoctorRecord>> listar() {
         return ApiResponse.ok(service.listar());
     }
 
     @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN_CLINICA')")
     public ApiResponse<DoctorRecord> crear(@Valid @RequestBody CrearDoctorRequest req) {
         return ApiResponse.ok(service.crear(req), "Doctor creado.");
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN_CLINICA')")
     public ApiResponse<DoctorRecord> actualizar(@PathVariable Long id,
                                                 @Valid @RequestBody CrearDoctorRequest req) {
         return ApiResponse.ok(service.actualizar(id, req), "Doctor actualizado.");

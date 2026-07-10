@@ -34,19 +34,22 @@ public class ClinicaService {
     private final RolRepository rolRepository;
     private final TipoCitaRepository tipoCitaRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.careone.api.core.doctor.DoctorRepository doctorRepository;
 
     public ClinicaService(ClinicaRepository clinicaRepository,
                           EspecialidadRepository especialidadRepository,
                           UsuarioRepository usuarioRepository,
                           RolRepository rolRepository,
                           TipoCitaRepository tipoCitaRepository,
-                          PasswordEncoder passwordEncoder) {
+                          PasswordEncoder passwordEncoder,
+                          com.careone.api.core.doctor.DoctorRepository doctorRepository) {
         this.clinicaRepository = clinicaRepository;
         this.especialidadRepository = especialidadRepository;
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.tipoCitaRepository = tipoCitaRepository;
         this.passwordEncoder = passwordEncoder;
+        this.doctorRepository = doctorRepository;
     }
 
     @Transactional(readOnly = true)
@@ -126,6 +129,16 @@ public class ClinicaService {
         admin.setActivo(true);
         admin.getRoles().add(rolAdmin);
         usuarioRepository.save(admin);
+
+        // El ADMIN_CLINICA también es doctor disponible para atender en su propia clínica.
+        Clinica clinica = clinicaRepository.findById(clinicaId)
+                .orElseThrow(() -> new IllegalStateException("Clinica no encontrada."));
+        com.careone.api.core.doctor.Doctor doctor = new com.careone.api.core.doctor.Doctor();
+        doctor.setTenantId(clinicaId);
+        doctor.setUsuario(admin);
+        doctor.setEspecialidad(clinica.getEspecialidad());
+        doctor.setActivo(true);
+        doctorRepository.save(doctor);
     }
 
     @Transactional

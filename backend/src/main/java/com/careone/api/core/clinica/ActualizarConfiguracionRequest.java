@@ -1,6 +1,8 @@
 package com.careone.api.core.clinica;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -24,6 +26,11 @@ public record ActualizarConfiguracionRequest(
         LocalTime horaApertura,
         @NotNull(message = "La hora de cierre es obligatoria.")
         LocalTime horaCierre,
+
+        @NotNull(message = "La duracion de cita por defecto es obligatoria.")
+        @Min(value = 5, message = "La duracion minima es 5 minutos.")
+        @Max(value = 480, message = "La duracion maxima es 480 minutos.")
+        Integer duracionCitaDefault,
 
         @Size(max = 30) String whatsappNumero,
         Boolean whatsappActivo

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box, Tabs, Tab, CircularProgress, Alert, Paper, Chip, Grid } from '@mui/material';
+import { Box, Tabs, Tab, CircularProgress, Alert, Paper, Chip, Grid, Button } from '@mui/material';
 import pacienteService from '../services/pacienteService';
 import pagoService, { tratamientoService } from '../services/pagoService';
 import { odontogramaService, citasHistorialService } from '../services/expedienteService';
@@ -11,6 +11,8 @@ import TabHigiene from '../components/expediente/TabHigiene';
 import TabConsentimientos from '../components/expediente/TabConsentimientos';
 import TabFacturacion from '../components/expediente/TabFacturacion';
 import TabComunicacion from '../components/expediente/TabComunicacion';
+import { Icon } from '../components/Icon';
+import { useNuevaCita } from '../context/NuevaCitaContext';
 import { palette } from '../theme';
 
 const money = (n) => '$' + Number(n || 0).toLocaleString('es-MX');
@@ -21,7 +23,11 @@ const TABS = ['Resumen', 'Salud', 'Historia clinica', 'Higiene', 'Odontograma', 
 export default function ClinicaExpediente() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { abrirNuevaCita } = useNuevaCita();
   const [tab, setTab] = useState(0);
+  // Si venimos de la Agenda, guarda la URL de retorno (con su contexto preservado).
+  const volverA = location.state?.volverA;
 
   const pacienteQuery = useQuery({ queryKey: ['paciente', id], queryFn: () => pacienteService.obtener(id) });
   const p = pacienteQuery.data;
@@ -35,12 +41,19 @@ export default function ClinicaExpediente() {
     <>
       {/* Header del paciente */}
       <Box sx={{ bgcolor: palette.white, borderBottom: `1px solid ${palette.border}`, px: 3.5, pt: 1.5, pb: 0 }}>
-        <Box sx={{ fontSize: 12.5, color: palette.text3, mb: 1 }}>
-          <span style={{ color: palette.blue, cursor: 'pointer' }} onClick={() => navigate('/clinica/pacientes')}>Pacientes</span> / {p.nombre} {p.apellidos}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+          <Box sx={{ fontSize: 12.5, color: palette.text3 }}>
+            <span style={{ color: palette.blue, cursor: 'pointer' }} onClick={() => navigate('/clinica/pacientes')}>Pacientes</span> / {p.nombre} {p.apellidos}
+          </Box>
+          {volverA && (
+            <Button size="small" startIcon={<Icon name="volver" size={15} />} onClick={() => navigate(volverA)}>
+              Volver a la agenda
+            </Button>
+          )}
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, pb: 2 }}>
           <Box sx={{ width: 52, height: 52, borderRadius: '50%', bgcolor: palette.blue, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700 }}>{iniciales}</Box>
-          <Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
             <Box sx={{ fontSize: 20, fontWeight: 800 }}>{p.nombre} {p.apellidos}</Box>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', fontSize: 13, color: palette.text2, flexWrap: 'wrap' }}>
               <span>{edad(p.fechaNacimiento)}</span>
@@ -54,6 +67,13 @@ export default function ClinicaExpediente() {
               {p.alergias && <Chip label="Alerta medica" size="small" sx={{ bgcolor: palette.redLight, color: palette.red, fontWeight: 600 }} />}
             </Box>
           </Box>
+          {/* Nueva cita con el paciente ya preseleccionado (no navega a Agenda). */}
+          <Button
+            variant="contained" startIcon={<Icon name="nuevo" size={16} />}
+            onClick={() => abrirNuevaCita({ paciente: p })}
+          >
+            Nueva cita
+          </Button>
         </Box>
         <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
           {TABS.map((t) => <Tab key={t} label={t} />)}

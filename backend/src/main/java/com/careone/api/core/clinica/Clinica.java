@@ -58,6 +58,10 @@ public class Clinica extends Auditable {
     @Column(name = "t_hora_cierre", nullable = false)
     private LocalTime horaCierre = LocalTime.of(18, 0);
 
+    // Duracion (min) por defecto de una cita; el agendamiento rapido no la pide.
+    @Column(name = "n_duracion_cita_def", nullable = false)
+    private int duracionCitaDefault = 30;
+
     @Column(name = "b_activo", nullable = false)
     private boolean activo = true;
 

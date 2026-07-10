@@ -10,13 +10,14 @@ import java.time.LocalTime;
 
 public record CrearCitaRequest(
         @NotNull(message = "El paciente es obligatorio.") Long pacienteId,
-        @NotNull(message = "El doctor es obligatorio.") Long doctorId,
+        // Opcional: si la clinica tiene un solo doctor, se asigna automaticamente.
+        Long doctorId,
         Long tipoCitaId,
         @Size(max = 200, message = "El tratamiento es demasiado largo.") String tratamiento,
         @Size(max = 400, message = "El motivo es demasiado largo.") String motivo,
         @NotNull(message = "La fecha es obligatoria.") LocalDate fecha,
         @NotNull(message = "La hora es obligatoria.") LocalTime horaInicio,
-        @NotNull(message = "La duracion es obligatoria.")
+        // Opcional: si no viene, se usa la duracion por defecto de la clinica.
         @Positive(message = "La duracion debe ser un numero positivo.") Integer duracionMin,
         BigDecimal monto,
         CanalConfirmacion canalConfirmacion,

@@ -9,8 +9,10 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import pacienteService from '../services/pacienteService';
 import DataTable from '../components/DataTable';
+import AltaRapidaDrawer from '../components/pacientes/AltaRapidaDrawer';
+import { Icon } from '../components/Icon';
 import { useNotify } from '../context/NotificationContext';
-import { palette } from '../theme';
+import { palette, tokens } from '../theme';
 import {
   validar, requerido, esEmail, esTelefono, esTipoSangre, maxLen,
   soloTelefono, erroresDelBackend,
@@ -43,6 +45,7 @@ export default function ClinicaPacientes() {
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState('');
   const [errs, setErrs] = useState({});
+  const [altaRapidaOpen, setAltaRapidaOpen] = useState(false);
   const notify = useNotify();
 
   const listQuery = useQuery({ queryKey: ['pacientes', q], queryFn: () => pacienteService.listar({ q }) });
@@ -132,6 +135,22 @@ export default function ClinicaPacientes() {
       <Box sx={{ p: 3.5 }}>
         {listQuery.isError ? (
           <Alert severity="error">No se pudieron cargar los pacientes.</Alert>
+        ) : !listQuery.isLoading && q.trim() && rows.length === 0 ? (
+          // Búsqueda sin resultados → ofrecer alta rápida sin salir del flujo.
+          <Box sx={{ py: 8, textAlign: 'center', bgcolor: palette.white, borderRadius: 3, border: `1px solid ${palette.border}` }}>
+            <Box sx={{ color: tokens.neutral[400], mb: 1.5, display: 'flex', justifyContent: 'center' }}>
+              <Icon name="pacientes" size={32} />
+            </Box>
+            <Box sx={{ fontSize: 15, fontWeight: 600, color: tokens.neutral[700] }}>
+              No encontramos pacientes
+            </Box>
+            <Box sx={{ fontSize: 13, color: palette.text2, mt: 0.5, mb: 2.5 }}>
+              No hay coincidencias para “{q.trim()}”.
+            </Box>
+            <Button variant="contained" startIcon={<Icon name="nuevo" size={16} />} onClick={() => setAltaRapidaOpen(true)}>
+              Nuevo paciente
+            </Button>
+          </Box>
         ) : (
           <DataTable
             loading={listQuery.isLoading}
@@ -200,6 +219,13 @@ export default function ClinicaPacientes() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <AltaRapidaDrawer
+        open={altaRapidaOpen}
+        onClose={() => setAltaRapidaOpen(false)}
+        nombreInicial={q.trim()}
+        onCreado={(paciente) => navigate(`/clinica/expediente/${paciente.id}`)}
+      />
     </>
   );
 }

@@ -1,15 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { Box, CircularProgress, Alert } from '@mui/material';
+import { Box, CircularProgress, Alert, IconButton } from '@mui/material';
 import citaService from '../../services/citaService';
-import { palette } from '../../theme';
+import { Icon } from '../Icon';
+import { useNuevaCita } from '../../context/NuevaCitaContext';
+import { palette, tokens } from '../../theme';
 
 const hhmm = (t) => (t ? t.slice(0, 5) : '');
 const iso = (d) => d.toISOString().slice(0, 10);
 
-const ESTADO_BAR = {
-  AGENDADA: palette.amber, CONFIRMADA: '#22C55E', EN_CONSULTA: palette.blue,
-  COMPLETADA: '#E5E7EB', NO_ASISTIO: palette.red,
-};
 const DIAS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
 
 // Lunes de la semana que contiene `fecha`.
@@ -20,7 +18,10 @@ function lunesDe(fechaIso) {
   return d;
 }
 
-export default function VistaSemanal({ fecha, onDiaClick }) {
+// onDiaClick(fechaIso)         -> ir a la agenda diaria de ese día
+// onCitaClick(fechaIso, cita)  -> abrir esa cita en la vista diaria
+export default function VistaSemanal({ fecha, onDiaClick, onCitaClick }) {
+  const { abrirNuevaCita } = useNuevaCita();
   const lunes = lunesDe(fecha);
   const dias = Array.from({ length: 7 }, (_, i) => { const d = new Date(lunes); d.setDate(d.getDate() + i); return d; });
   const desde = iso(dias[0]);
@@ -43,23 +44,54 @@ export default function VistaSemanal({ fecha, onDiaClick }) {
         const lista = (porDia[di] || []).sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
         const esHoy = di === hoyIso;
         return (
-          <Box key={di} sx={{ bgcolor: palette.white, border: `1px solid ${esHoy ? palette.blue : palette.border}`, borderRadius: 2, overflow: 'hidden', minHeight: 240 }}>
-            <Box onClick={() => onDiaClick?.(di)} sx={{ p: 1, textAlign: 'center', borderBottom: `1px solid ${palette.divider}`, cursor: 'pointer', bgcolor: esHoy ? palette.blueLight : 'transparent' }}>
+          <Box key={di} sx={{
+            bgcolor: palette.white, borderRadius: 2, overflow: 'hidden', minHeight: 260,
+            border: `1px solid ${esHoy ? palette.blue : palette.border}`,
+            display: 'flex', flexDirection: 'column',
+          }}>
+            {/* Cabecera del día: número en círculo navy si es hoy (consistente con vista mensual). */}
+            <Box onClick={() => onDiaClick?.(di)} sx={{
+              p: 1, textAlign: 'center', borderBottom: `1px solid ${palette.divider}`, cursor: 'pointer',
+              bgcolor: esHoy ? palette.blueLight : 'transparent',
+            }}>
               <Box sx={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', color: palette.text3 }}>{DIAS[i]}</Box>
-              <Box sx={{ fontSize: 16, fontWeight: 800, color: esHoy ? palette.blue : palette.text }}>{d.getDate()}</Box>
+              {esHoy ? (
+                <Box sx={{ mt: 0.5, mx: 'auto', width: 26, height: 26, borderRadius: '50%', bgcolor: palette.blue, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700 }}>
+                  {d.getDate()}
+                </Box>
+              ) : (
+                <Box sx={{ fontSize: 16, fontWeight: 700, color: palette.text }}>{d.getDate()}</Box>
+              )}
             </Box>
-            <Box sx={{ p: 0.75, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              {lista.length === 0 ? (
-                <Box sx={{ fontSize: 11, color: palette.text3, textAlign: 'center', py: 1 }}>—</Box>
-              ) : lista.map((c) => (
-                <Box key={c.id} onClick={() => onDiaClick?.(di)} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, p: '4px 6px', borderRadius: 1, bgcolor: '#FAFAFA', cursor: 'pointer', '&:hover': { bgcolor: palette.divider } }}>
-                  <Box sx={{ width: 3, alignSelf: 'stretch', borderRadius: 1, bgcolor: ESTADO_BAR[c.estado] || '#E5E7EB' }} />
-                  <Box sx={{ minWidth: 0 }}>
+
+            {/* Citas del día */}
+            <Box sx={{ p: 0.75, display: 'flex', flexDirection: 'column', gap: 0.5, flex: 1 }}>
+              {lista.map((c) => (
+                <Box key={c.id}
+                  onClick={() => onCitaClick?.(di, c)}
+                  sx={{ display: 'flex', alignItems: 'center', gap: 0.75, p: '5px 7px', borderRadius: 1.5, bgcolor: tokens.neutral[50], cursor: 'pointer', '&:hover': { bgcolor: tokens.neutral[100] } }}
+                >
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
                     <Box sx={{ fontSize: 10.5, fontWeight: 700, color: palette.text2 }}>{hhmm(c.horaInicio)}</Box>
                     <Box sx={{ fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.pacienteNombre}</Box>
+                    {/* Doctor visible para identificarlo cuando hay varios. */}
+                    <Box sx={{ fontSize: 10, color: palette.text3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.doctorNombre}</Box>
                   </Box>
+                  {c.alertas?.length > 0 && <Icon name="alertaClinica" size={13} style={{ color: tokens.danger.solid, flexShrink: 0 }} />}
                 </Box>
               ))}
+            </Box>
+
+            {/* Crear cita en este día (horario libre). */}
+            <Box sx={{ p: 0.5, borderTop: `1px solid ${palette.divider}` }}>
+              <IconButton
+                size="small" onClick={() => abrirNuevaCita({ fecha: di })}
+                aria-label={`Nueva cita el ${di}`}
+                sx={{ width: '100%', borderRadius: 1.5, color: tokens.success.text, fontSize: 12, '&:hover': { bgcolor: tokens.success.soft } }}
+              >
+                <Icon name="nuevo" size={15} style={{ marginRight: 4 }} />
+                <Box component="span" sx={{ fontSize: 11.5, fontWeight: 600 }}>Cita</Box>
+              </IconButton>
             </Box>
           </Box>
         );
